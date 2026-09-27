@@ -11,7 +11,8 @@
     "load-test": "node load-test.js",
     "grafana:build": "node monitoring/grafana/build-dashboards.js",
     "grafana:decompose": "node monitoring/grafana/decompose-dashboards.js",
-    "simulate:lazy-connection": "node simulations/lazy-connection/index.js"
+    "simulate:lazy-connection": "node simulations/lazy-connection/index.js",
+    "simulate:connection-pooling": "node simulations/connection-pooling/index.js"
   },
   "dependencies": {
     "@faker-js/faker": "^8.4.1",
