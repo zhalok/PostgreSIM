@@ -10,10 +10,11 @@
     "seed:customers": "bash dummy-data/seed.sh",
     "load-test": "node load-test.js",
     "grafana:build": "node monitoring/grafana/build-dashboards.js",
-    "grafana:decompose": "node monitoring/grafana/decompose-dashboards.js"
+    "grafana:decompose": "node monitoring/grafana/decompose-dashboards.js",
+    "simulate:lazy-connection": "node simulations/lazy-connection/index.js"
   },
   "dependencies": {
     "@faker-js/faker": "^8.4.1",
-    "pg": "^8.11.5"
+    "pg": "^8.23.0"
   }
 }

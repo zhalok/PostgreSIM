@@ -1,0 +1,56 @@
+import { Client } from "pg";
+
+const CONCURRENT_RUNS = parseInt(process.env.CONCURRENT_RUNS) | 10;
+
+async function scanCustomersWithOwnConnection(runId) {
+  const startedAt = Date.now();
+  console.log(`[run ${runId}] connecting`);
+
+  const client = new Client({
+    host: process.env.PGHOST || "localhost",
+    port: process.env.PGPORT || 5432,
+    user: process.env.PGUSER || "postgres",
+    password: process.env.PGPASSWORD || "postgres",
+    database: process.env.PGDATABASE || "postgres",
+  });
+
+  try {
+    await client.connect();
+    console.log(`[run ${runId}] connected (${Date.now() - startedAt}ms)`);
+
+    const holdMs = 5000 + Math.floor(Math.random() * 5000);
+    console.log(`[run ${runId}] holding connection idle for ${holdMs}ms`);
+    await new Promise((resolve) => setTimeout(resolve, holdMs));
+
+    console.log(`[run ${runId}] done: ${Date.now() - startedAt}ms`);
+  } catch (err) {
+    console.error(`[run ${runId}] failed after ${Date.now() - startedAt}ms:`, err.message);
+    throw err;
+  } finally {
+    await client.end();
+  }
+}
+
+async function main() {
+  console.log(`Starting ${CONCURRENT_RUNS} concurrent connections`);
+  const startedAt = Date.now();
+
+  const runs = Array.from({ length: CONCURRENT_RUNS }, (_, i) =>
+    scanCustomersWithOwnConnection(i + 1)
+  );
+
+  const results = await Promise.allSettled(runs);
+
+  const succeeded = results.filter((r) => r.status === "fulfilled").length;
+  const failed = results.filter((r) => r.status === "rejected");
+
+  console.log(`\nFinished in ${Date.now() - startedAt}ms`);
+  console.log(`Succeeded: ${succeeded}/${CONCURRENT_RUNS}`);
+  console.log(`Failed: ${failed.length}/${CONCURRENT_RUNS}`);
+
+  if (failed.length > 0) {
+    console.log("Sample failure reason:", failed[0].reason?.message ?? failed[0].reason);
+  }
+}
+
+main();
