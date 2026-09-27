@@ -1,6 +1,7 @@
 import { Client } from "pg";
 
 const CONCURRENT_RUNS = parseInt(process.env.CONCURRENT_RUNS) | 10;
+const DURATION_MS = (parseInt(process.env.DURATION_SECONDS) || 30) * 1000;
 
 async function scanCustomersWithOwnConnection(runId) {
   const startedAt = Date.now();
@@ -32,24 +33,43 @@ async function scanCustomersWithOwnConnection(runId) {
 }
 
 async function main() {
-  console.log(`Starting ${CONCURRENT_RUNS} concurrent connections`);
+  console.log(
+    `Running for ${DURATION_MS}ms, spawning ${CONCURRENT_RUNS} concurrent connections per batch`
+  );
   const startedAt = Date.now();
 
-  const runs = Array.from({ length: CONCURRENT_RUNS }, (_, i) =>
-    scanCustomersWithOwnConnection(i + 1)
-  );
+  let batchNumber = 0;
+  let totalSucceeded = 0;
+  let totalFailed = 0;
+  let lastFailureReason;
+  let runId = 0;
 
-  const results = await Promise.allSettled(runs);
+  while (Date.now() - startedAt < DURATION_MS) {
+    batchNumber += 1;
+    console.log(`\n-- batch ${batchNumber} --`);
 
-  const succeeded = results.filter((r) => r.status === "fulfilled").length;
-  const failed = results.filter((r) => r.status === "rejected");
+    const runs = Array.from({ length: CONCURRENT_RUNS }, () =>
+      scanCustomersWithOwnConnection(++runId)
+    );
 
-  console.log(`\nFinished in ${Date.now() - startedAt}ms`);
-  console.log(`Succeeded: ${succeeded}/${CONCURRENT_RUNS}`);
-  console.log(`Failed: ${failed.length}/${CONCURRENT_RUNS}`);
+    const results = await Promise.allSettled(runs);
 
-  if (failed.length > 0) {
-    console.log("Sample failure reason:", failed[0].reason?.message ?? failed[0].reason);
+    const succeeded = results.filter((r) => r.status === "fulfilled").length;
+    const failed = results.filter((r) => r.status === "rejected");
+
+    totalSucceeded += succeeded;
+    totalFailed += failed.length;
+    if (failed.length > 0) {
+      lastFailureReason = failed[0].reason?.message ?? failed[0].reason;
+    }
+  }
+
+  console.log(`\nFinished in ${Date.now() - startedAt}ms across ${batchNumber} batches`);
+  console.log(`Succeeded: ${totalSucceeded}`);
+  console.log(`Failed: ${totalFailed}`);
+
+  if (lastFailureReason) {
+    console.log("Sample failure reason:", lastFailureReason);
   }
 }
 
