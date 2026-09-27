@@ -1,7 +1,19 @@
 import { Client } from "pg";
+import { createInterface } from "node:readline/promises";
 
-const CONCURRENT_RUNS = parseInt(process.env.CONCURRENT_RUNS) | 10;
-const DURATION_MS = (parseInt(process.env.DURATION_SECONDS) || 30) * 1000;
+async function promptForParams() {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+
+  const concurrentAnswer = await rl.question("Concurrent connections per batch [default: 10]: ");
+  const durationAnswer = await rl.question("Duration in seconds [default: 30s]: ");
+
+  rl.close();
+
+  const concurrentRuns = parseInt(concurrentAnswer) || 10;
+  const durationSeconds = parseInt(durationAnswer) || 30;
+
+  return { concurrentRuns, durationMs: durationSeconds * 1000 };
+}
 
 async function scanCustomersWithOwnConnection(runId) {
   const startedAt = Date.now();
@@ -33,8 +45,10 @@ async function scanCustomersWithOwnConnection(runId) {
 }
 
 async function main() {
+  const { concurrentRuns, durationMs } = await promptForParams();
+
   console.log(
-    `Running for ${DURATION_MS}ms, spawning ${CONCURRENT_RUNS} concurrent connections per batch`
+    `\nRunning for ${durationMs}ms, spawning ${concurrentRuns} concurrent connections per batch`
   );
   const startedAt = Date.now();
 
@@ -44,11 +58,11 @@ async function main() {
   let lastFailureReason;
   let runId = 0;
 
-  while (Date.now() - startedAt < DURATION_MS) {
+  while (Date.now() - startedAt < durationMs) {
     batchNumber += 1;
     console.log(`\n-- batch ${batchNumber} --`);
 
-    const runs = Array.from({ length: CONCURRENT_RUNS }, () =>
+    const runs = Array.from({ length: concurrentRuns }, () =>
       scanCustomersWithOwnConnection(++runId)
     );
 
