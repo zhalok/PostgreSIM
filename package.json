@@ -1,0 +1,19 @@
+{
+  "name": "postgrespector",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "insert": "node insert_huge_json.js",
+    "insert:customers": "node insert_customers.js",
+    "download:customer-dump": "bash dummy-data/download-customer-dump.sh",
+    "seed:customers": "bash dummy-data/seed.sh",
+    "load-test": "node load-test.js",
+    "grafana:build": "node monitoring/grafana/build-dashboards.js",
+    "grafana:decompose": "node monitoring/grafana/decompose-dashboards.js"
+  },
+  "dependencies": {
+    "@faker-js/faker": "^8.4.1",
+    "pg": "^8.11.5"
+  }
+}
